@@ -10,5 +10,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY gam_mcp /app/gam_mcp
 
+RUN mkdir -p /gam-auth/cache
+
 ENV PYTHONUNBUFFERED=1
 CMD ["python", "-m", "gam_mcp.server"]

@@ -6,7 +6,8 @@ services:
     volumes:
       - ./config:/config:ro
       - ./data:/data
-      - /path/to/gam-auth:/root/.gam:ro
+      - /path/to/gam-auth:/gam-auth
     environment:
       - MCP_CONFIG=/config/gam-mcp.json
       - STORE_DB=/data/proposals.sqlite
+      - GAMCFGDIR=/gam-auth
