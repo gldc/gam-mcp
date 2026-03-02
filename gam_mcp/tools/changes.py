@@ -5,35 +5,59 @@ from ..gam import run_gam
 from ..store import Store
 
 
-def execute(cfg: AppConfig, store: Store, approval_token: str, approved_by: int) -> Dict[str, Any]:
+def execute(
+    cfg: AppConfig, store: Store, approval_token: str, approved_by: int
+) -> Dict[str, Any]:
     # In v1, approval_token == proposal_id. (We can upgrade to HMAC tokens later.)
     pid = approval_token
     prop = store.get_proposal(pid)
     if not prop:
-        raise ValueError('Unknown proposal')
+        raise ValueError("Unknown proposal")
 
     store.expire_old()
     prop = store.get_proposal(pid)
 
-    if prop.status == 'expired':
-        raise ValueError('Proposal expired')
-    if prop.status == 'denied':
-        raise ValueError('Proposal denied')
-    if prop.status == 'executed':
-        raise ValueError('Proposal already executed')
+    if prop.status == "expired":
+        raise ValueError("Proposal expired")
+    if prop.status == "denied":
+        raise ValueError("Proposal denied")
+    if prop.status == "executed":
+        raise ValueError("Proposal already executed")
 
     if approved_by not in cfg.approver_telegram_user_ids:
-        raise PermissionError('Not an allowed approver')
+        raise PermissionError("Not an allowed approver")
 
     # Mark approved if still proposed
-    if prop.status == 'proposed':
+    if prop.status == "proposed":
         store.approve(pid, approved_by=approved_by)
         prop = store.get_proposal(pid)
 
-    if prop.status != 'approved':
-        raise ValueError('Proposal not approved')
+    if prop.status != "approved":
+        raise ValueError("Proposal not approved")
 
     r = run_gam(prop.command_preview)
     store.mark_executed(pid, exit_code=r.exit_code, stdout=r.stdout, stderr=r.stderr)
 
-    return {'proposal_id': pid, 'exit_code': r.exit_code, 'stdout': r.stdout, 'stderr': r.stderr}
+    return {
+        "proposal_id": pid,
+        "exit_code": r.exit_code,
+        "stdout": r.stdout,
+        "stderr": r.stderr,
+    }
+
+
+def deny(
+    cfg: AppConfig, store: Store, proposal_id: str, denied_by: int
+) -> Dict[str, Any]:
+    prop = store.get_proposal(proposal_id)
+    if not prop:
+        raise ValueError("Unknown proposal")
+
+    if denied_by not in cfg.approver_telegram_user_ids:
+        raise PermissionError("Not an allowed approver")
+
+    if prop.status not in ("proposed", "approved"):
+        raise ValueError(f"Proposal status is '{prop.status}', cannot deny")
+
+    store.deny(proposal_id, denied_by)
+    return {"proposal_id": proposal_id, "status": "denied"}

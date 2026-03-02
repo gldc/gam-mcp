@@ -76,20 +76,16 @@ def register_rest_routes(server: FastMCP, cfg: AppConfig, store: Store) -> None:
                 {"ok": False, "error": "denied_by must be numeric"}, status_code=400
             )
 
-        prop = store.get_proposal(proposal_id)
-        if not prop:
-            return JSONResponse({"ok": False, "error": "Unknown proposal"}, status_code=404)
-        if prop.status not in ("proposed", "approved"):
-            return JSONResponse(
-                {
-                    "ok": False,
-                    "error": f"Proposal status is '{prop.status}', cannot deny",
-                },
-                status_code=409,
-            )
-
-        store.deny(proposal_id, denied_by_int)
-        return JSONResponse({"ok": True})
+        try:
+            result = changes.deny(cfg, store, proposal_id, denied_by_int)
+            return JSONResponse({"ok": True, "result": result})
+        except PermissionError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=403)
+        except ValueError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=409)
+        except Exception as exc:
+            traceback.print_exc()
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
 
 
 def main() -> None:
@@ -157,6 +153,11 @@ def main() -> None:
     @server.tool("changes.execute")
     def _changes_execute(approval_token: str, approved_by: int):
         return changes.execute(cfg, store, approval_token, approved_by)
+
+    @server.tool("changes.deny")
+    def _changes_deny(proposal_id: str, denied_by: int):
+        """Deny a pending or approved proposal so it cannot be executed later."""
+        return changes.deny(cfg, store, proposal_id, denied_by)
 
     # Register REST approval endpoints as custom routes on the MCP server.
     register_rest_routes(server, cfg, store)
