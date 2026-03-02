@@ -1,0 +1,6 @@
+# runtime
+mcp
+pydantic
+pyyaml
+
+gam7

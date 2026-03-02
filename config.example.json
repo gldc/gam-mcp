@@ -1,0 +1,8 @@
+{
+  "allowed_domains_internal": ["example.com"],
+  "allowed_domains_external": ["partner.org"],
+  "deny_domain_wide_permissions": true,
+  "deny_anyone_permissions": true,
+  "approval_ttl_seconds": 600,
+  "approver_telegram_user_ids": [123456789]
+}
